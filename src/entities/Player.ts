@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { KEYS } from '../data/keymap';
 import type { Climbable } from '../data/maps';
 import { BASIC_ATTACK } from '../data/player';
+import type { SkillDef } from '../data/skills';
 import { RANGE_UNIT, toPixels } from '../data/units';
 import type { KeyInput } from '../systems/KeyInput';
 import type { CharacterStats } from '../systems/Stats';
@@ -29,6 +30,9 @@ const HURT_KNOCKBACK_Y = -260;
 const HURT_STUN_MS = 300; // 튕겨 나가는 동안은 조작할 수 없다
 const INVINCIBLE_MS = 1000; // 맞은 뒤 깜빡이며 무적
 
+/** 공격 한 번의 범위·계수·속도 (기본 공격과 스킬이 같이 쓴다) */
+type Strike = { range: number; power: number; cooldownMs: number; poseMs: number };
+
 /** 공격 판정. area 안에 있는 대상에게 damage를 준다. */
 export type AttackHandler = (area: Phaser.Geom.Rectangle, damage: number, dir: 1 | -1) => void;
 
@@ -41,6 +45,8 @@ export class Player {
   private attackReadyAt = 0;
   private attackPoseUntil = 0;
   private attackStartedAt = -Infinity;
+  /** 칼을 던져서 손이 비어 있는 동안 */
+  private throwingUntil = 0;
   private hurtUntil = 0;
   private invincibleUntil = 0;
   private readonly spawn: { x: number; y: number };
@@ -76,7 +82,12 @@ export class Player {
     return this.facing;
   }
 
-  /** 마지막으로 공격을 시작한 시각 */
+  /** 칼을 던져서 손에 무기가 없는가 */
+  isThrowing(time: number) {
+    return time < this.throwingUntil;
+  }
+
+  /** 마지막으로 기본 공격을 시작한 시각 */
   get lastAttackAt() {
     return this.attackStartedAt;
   }
@@ -104,7 +115,8 @@ export class Player {
 
     // X를 누르고 있으면 쿨다운마다 계속 때린다
     if (keys.isDown(KEYS.attack) && time >= this.attackReadyAt) {
-      this.attack(time);
+      this.strike(time, BASIC_ATTACK);
+      this.attackStartedAt = time;
     }
     const attacking = time < this.attackPoseUntil;
 
@@ -180,22 +192,34 @@ export class Player {
     return (MOVE_SPEED * this.stats.derived.moveSpeed) / 100;
   }
 
-  private attack(time: number) {
+  /**
+   * 스킬을 쓴다. 기본 공격과 같은 대기시간을 쓰고, 밧줄에 매달렸거나 맞고 튕겨 나가는 중이면 쓰지 못한다.
+   * 쓰면 true. 무기 조건은 부르는 쪽(GameScene)에서 확인한다.
+   */
+  useSkill(skill: SkillDef, time: number) {
+    if (this.rope || time < this.hurtUntil || time < this.attackReadyAt) return false;
+    this.strike(time, skill);
+    this.throwingUntil = time + skill.poseMs;
+    if (this.body.blocked.down || this.body.touching.down) this.body.setVelocityX(0);
+    return true;
+  }
+
+  /** 앞으로 손을 뻗는 자세를 취하고, 몸 앞쪽 범위에 데미지를 준다 */
+  private strike(time: number, s: Strike) {
     const stats = this.stats.derived;
     // 공격속도가 높을수록 다음 공격까지의 간격이 짧아진다
-    this.attackReadyAt = time + (BASIC_ATTACK.cooldownMs * 100) / stats.attackSpeed;
-    this.attackPoseUntil = time + BASIC_ATTACK.poseMs;
-    this.attackStartedAt = time;
+    this.attackReadyAt = time + (s.cooldownMs * 100) / stats.attackSpeed;
+    this.attackPoseUntil = time + s.poseMs;
 
     if (this.sprite.anims.isPlaying) this.sprite.anims.stop();
     this.sprite.setTexture(PLAYER_PUNCH_TEXTURE);
 
     // 판정: 몸 앞면(가운데 + 범위 0.5)에서 앞으로 range만큼, 높이는 몸 전체
-    const reach = toPixels(BASIC_ATTACK.range);
+    const reach = toPixels(s.range);
     const front = this.sprite.x + this.facing * (RANGE_UNIT / 2);
     const left = this.facing === 1 ? front : front - reach;
     const area = new Phaser.Geom.Rectangle(left, this.body.top, reach, HEIGHT);
-    this.onAttack(area, Math.round(this.stats.rollAttack() * BASIC_ATTACK.power), this.facing);
+    this.onAttack(area, Math.round(this.stats.rollAttack() * s.power), this.facing);
   }
 
   private face(dir: number) {

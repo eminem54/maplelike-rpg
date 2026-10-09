@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { KEYS } from '../data/keymap';
 import type { KeyInput } from '../systems/KeyInput';
-import { WINDOW_COLOR } from './UIWindow';
+import { PANEL, TEXT } from '../theme/colors';
 
 export type DialogChoice = { label: string; run: () => void };
 
@@ -13,10 +13,8 @@ const NAME_H = 28;
 const CHOICE_W = 120;
 const CHOICE_H = 32;
 
-const COLOR = {
-  choice: 0x2c3a5e,
-  choiceSelected: 0x4a6ac0,
-};
+/** 고른 선택지 */
+const CHOICE_SELECTED = 0x4a6ac0;
 
 /**
  * 화면 위쪽 대화창. say()로 대사를 한 줄씩 넘기고, ask()로 선택지를 고른다.
@@ -44,23 +42,23 @@ export class DialogBox {
     const y = TOP;
 
     const box = scene.add
-      .rectangle(0, 0, W, H, WINDOW_COLOR.panel, 0.96)
+      .rectangle(0, 0, W, H, PANEL.bg, 0.96)
       .setOrigin(0)
-      .setStrokeStyle(2, WINDOW_COLOR.border)
+      .setStrokeStyle(2, PANEL.border)
       .setInteractive({ cursor: 'pointer' });
     this.nameBg = scene.add
-      .rectangle(PAD, -NAME_H + 4, 10, NAME_H, WINDOW_COLOR.title)
+      .rectangle(PAD, -NAME_H + 4, 10, NAME_H, PANEL.header)
       .setOrigin(0)
-      .setStrokeStyle(2, WINDOW_COLOR.border);
+      .setStrokeStyle(2, PANEL.border);
     this.nameText = scene.add
-      .text(PAD + 12, -NAME_H / 2 + 4, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#fff27a' })
+      .text(PAD + 12, -NAME_H / 2 + 4, '', { fontFamily: 'sans-serif', fontSize: '15px', color: TEXT.accent })
       .setOrigin(0, 0.5);
     this.bodyText = scene.add.text(PAD, PAD, '', {
-      fontFamily: 'sans-serif', fontSize: '17px', color: '#ffffff', lineSpacing: 6,
+      fontFamily: 'sans-serif', fontSize: '17px', color: TEXT.main, lineSpacing: 6,
       wordWrap: { width: W - PAD * 2, useAdvancedWrap: true },
     });
     this.hint = scene.add
-      .text(W - PAD, H - 12, 'Space ▶', { fontFamily: 'sans-serif', fontSize: '13px', color: WINDOW_COLOR.dimText })
+      .text(W - PAD, H - 12, 'Space ▶', { fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.dim })
       .setOrigin(1, 1);
     this.root = scene.add.container(x, y, [box, this.nameBg, this.nameText, this.bodyText, this.hint]).setDepth(900);
 
@@ -69,12 +67,12 @@ export class DialogBox {
       const bx = W - PAD - (2 - i) * (CHOICE_W + 10) + 10;
       const by = H - PAD - CHOICE_H;
       const bg = scene.add
-        .rectangle(bx, by, CHOICE_W, CHOICE_H, COLOR.choice)
+        .rectangle(bx, by, CHOICE_W, CHOICE_H, PANEL.header)
         .setOrigin(0)
-        .setStrokeStyle(1, WINDOW_COLOR.border)
+        .setStrokeStyle(1, PANEL.border)
         .setInteractive({ cursor: 'pointer' });
       const label = scene.add
-        .text(bx + CHOICE_W / 2, by + CHOICE_H / 2, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#ffffff' })
+        .text(bx + CHOICE_W / 2, by + CHOICE_H / 2, '', { fontFamily: 'sans-serif', fontSize: '15px', color: TEXT.main })
         .setOrigin(0.5);
       bg.on('pointerover', () => this.select(i));
       bg.on('pointerdown', () => this.choose(i));
@@ -186,7 +184,7 @@ export class DialogBox {
       label.setVisible(!!choice);
       if (!choice) return;
       label.setText(choice.label);
-      bg.setFillStyle(i === this.selected ? COLOR.choiceSelected : COLOR.choice);
+      bg.setFillStyle(i === this.selected ? CHOICE_SELECTED : PANEL.header);
     });
   }
 }

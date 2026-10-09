@@ -17,10 +17,13 @@
 | ← → | 이동 |
 | C | 점프 (밧줄 위에서는 ←/→ + C로 뛰어내리기) |
 | X | 공격 |
+| Z | 발밑에 떨어진 아이템 줍기 (한 번에 하나) |
 | Space | NPC 대화, 대화 넘기기 |
-| ↑ ↓ | 밧줄·사다리 오르내리기, ↑로 빛 기둥 사용(지금은 "준비 중") |
+| ↑ ↓ | 밧줄·사다리 오르내리기, ↑로 빛 기둥을 타고 맵 이동 |
 | I | 인벤토리 + 장비창 열기/닫기 |
-| S | 상태창 열기/닫기 |
+| P | 상태창 열기/닫기 |
+| K | 스킬창 열기/닫기 (아이콘을 하단 단축키 칸에 끌어다 놓는다) |
+| Q W E R T / A S D F G | 단축키 칸에 놓은 스킬 쓰기 (누르고 있으면 계속) |
 | Esc | 창 닫기 |
 | 마우스 | 아이템 더블클릭/우클릭으로 장착·해제, 상태창 + 버튼 |
 | DEV 메뉴 | 화면 오른쪽 위에 마우스를 올리면 나오는 드롭다운: 레벨 업/다운/1로 초기화/모든 데이터 초기화 |
@@ -32,33 +35,40 @@
 src/
   main.ts            Phaser 설정 (1280x720, Arcade 중력 1400, 키보드 플러그인 끔, 우클릭 메뉴 끔)
   scenes/
-    GameScene.ts     맵, 플레이어, 몬스터, NPC 구성과 매 프레임 갱신. 저장 불러오기·자동 저장 연결
+    GameScene.ts     맵 데이터로 맵 하나를 구성하고 매 프레임 갱신. 포탈을 타면 다른 맵으로 restart. 저장 불러오기·자동 저장 연결
     UIScene.ts       HUD, 창, 대화, DEV 메뉴 등 UI (GameScene이 띄움)
   entities/
     Player.ts        이동·점프·밧줄·공격·피격(1초 무적, 깜빡임)
     HeldItems.ts     손에 든 검·방패 겹쳐 그리기, 검 휘두르기 궤적
-    Duck.ts          아기 오리 AI (비선공, 맞으면 화남)
+    WornItems.ts     입은 상의·하의를 캐릭터 위에 겹쳐 그리기 (자세가 바뀌면 같은 자세의 옷 그림으로)
+    Monster.ts       몬스터 공통 AI (비선공, 맞으면 화남). 생김새(MonsterLook)와 능력치는 데이터로 받는다
     Sandbag.ts       샌드백
     Hittable.ts      공격 대상 공통 인터페이스
     Npc.ts, Portal.ts  황금기사 NPC, 빛 기둥
   systems/
     KeyInput.ts      window capture 단계 키 입력 (e.code 기준)
     Stats.ts         기본/전투 능력치, 레벨·경험치, 장비 보너스
-    Inventory.ts     96칸 인벤토리
+    Inventory.ts     96칸 인벤토리 + 골드
+    Loot.ts          몬스터를 쓰러뜨렸을 때 골드·드랍 아이템 정하기 (rollLoot)
     Equipment.ts     13칸 장비 장착/해제
     SaveGame.ts      localStorage 저장/불러오기, AutoSaver
     Terrain.ts       꺾은선 경사 지형 충돌
-    MonsterSpawner.ts  주기적 몬스터 채우기
-    Progress.ts      스토리 진행(초보자 장비 수령 여부)
+    MonsterSpawner.ts  주기적 몬스터 채우기 (출현 규칙 하나당 하나)
+    MapBuilder.ts    맵 데이터대로 지형·발판·밧줄을 그리고 포탈·NPC·샌드백 배치
+    Progress.ts      스토리 진행(초보자 장비 수령 여부), 마지막으로 있던 맵
+    SkillBook.ts     배운 스킬과 단축키 칸 배치 (놓기, 칸끼리 옮기기, 빼기)
   ui/
-    UIWindow.ts(창 공통), InventoryWindow.ts, EquipmentWindow.ts, StatusWindow.ts,
-    Hud.ts(HP/MP 구슬, 경험치바), DialogBox.ts, DevMenu.ts, ItemTooltip.ts, slotInput.ts
+    UIWindow.ts(창 공통), InventoryWindow.ts, EquipmentWindow.ts, StatusWindow.ts, SkillWindow.ts,
+    Hud.ts(HP/MP 구슬, 경험치바, 스킬 단축키 10칸), DialogBox.ts, DevMenu.ts, ItemTooltip.ts, slotInput.ts, iconDrag.ts
   data/
-    maps.ts(FIELD_1), items.ts, equipment.ts(13칸 배치), monsters.ts, keymap.ts, units.ts, player.ts
-  art/               playerArt, duckArt, knightArt, heldItemArt, pixelArt (문자열 도트 → 텍스처)
+    maps/            types.ts(MapData), index.ts(MAPS 목록), 맵마다 파일 하나(field1.ts, field2.ts)
+    items/           types.ts(ItemDef), icon.ts(팔레트), 종류별 파일(weapons.ts, shields.ts, tops.ts, bottoms.ts), index.ts(ITEMS 합치기)
+    equipment.ts(13칸 배치), monsters/(종족별 파일: bird.ts, mouse.ts), skills.ts(스킬 정의), keymap.ts(SKILL_HOTKEYS 포함), units.ts, player.ts
+  art/               playerArt, duckArt, squirrelArt, knightArt, heldItemArt, wornItemArt, pixelArt (문자열 도트 → 텍스처)
   effects/damageText.ts   데미지 숫자
-  story/knight.ts    황금기사 대화 스크립트와 선택지
-tests/               stats, terrain, equipment, inventory, save
+  theme/colors.ts    여러 곳에서 함께 쓰는 색 (창 바탕·테두리, 글자 색, HP/MP). 한 곳에서만 쓰는 색은 그 파일에 둔다
+  story/            npcs.ts(NPC 목록: 이름·생김새·대화), knight.ts(황금기사 대화와 선택지)
+tests/               stats, terrain, equipment, inventory, save, maps, items, monsters, loot, worn, skills(데이터 검사)
 docs/                PLAN.md(계획), CONVERSATION_LOG.md(대화기록), DEVLOG.md(이 문서)
 ```
 로직(능력치, 인벤토리, 장비, 저장, 지형)은 Phaser 의존을 최소화해 단위 테스트가 가능하다.
@@ -87,6 +97,7 @@ docs/                PLAN.md(계획), CONVERSATION_LOG.md(대화기록), DEVLOG.
 21. **자동 저장**.
 22. **손에 든 장비 + 검 공격 모션**.
 23. **문서화와 첫 커밋**.
+24. **맵 구조 리팩터링 + 맵 이동**: 맵을 파일별로 분리, 오브젝트 목록, NPC 목록, MapBuilder, 포탈 연결과 현재 맵 저장.
 
 ### PLAN.md 마일스톤 대비 현황
 | 마일스톤 | 상태 |
@@ -94,9 +105,9 @@ docs/                PLAN.md(계획), CONVERSATION_LOG.md(대화기록), DEVLOG.
 | M0 셋업 | 완료 |
 | M1 이동 | 대부분 완료 (이동, 점프, 밧줄/사다리, 카메라). 더블 점프와 아래 점프 통과는 미구현 |
 | M2 전투 기본 | 일부 (기본 공격, 데미지 숫자, 피격 무적, 몬스터 1종, 리젠). 3타 콤보, 대시, 히트스톱, 경직은 미구현 |
-| M3 성장 | 일부 (경험치/레벨/능력치 포인트, HP/MP). 스킬, 핫키, MP 사용은 미구현 |
-| M4 파밍 | 일부 (인벤토리, 장비창, 장착 반영, 툴팁). 드랍, 등급, 랜덤 옵션, 바닥 줍기는 미구현 |
-| M5 월드와 보스 | 일부 (NPC, 저장). 마을, 포털 이동, 보스, 상점은 미구현 |
+| M3 성장 | 일부 (경험치/레벨/능력치 포인트, HP/MP, 스킬창, 단축키, 칼 던지기). MP 사용, 스킬 레벨은 미구현 |
+| M4 파밍 | 일부 (인벤토리, 장비창, 장착 반영, 툴팁, 드랍과 Z 줍기, 골드). 등급, 랜덤 옵션은 미구현 |
+| M5 월드와 보스 | 일부 (NPC, 저장, 포털 이동). 마을, 보스, 상점은 미구현 |
 | M6 다듬기 | 일부 (픽셀아트 도입). 효과음, 밸런스 조정은 미구현 |
 
 계획서에 없던 것이 앞서 들어간 부분도 있다: 6종 기본 능력치 체계, 경사 지형, 스토리 선택지(받기/받지 않기), DEV 메뉴.
@@ -127,7 +138,7 @@ docs/                PLAN.md(계획), CONVERSATION_LOG.md(대화기록), DEVLOG.
 - 명중/회피/크리티컬 등은 지금은 계산만 하고 전투에 적용하지 않았다.
 
 ### 경험치/레벨
-- 최대 레벨 999, 레벨업마다 능력치 포인트 10 (`STAT_POINTS_PER_LEVEL`).
+- 최대 레벨 999. 레벨업마다 능력치 포인트를 100레벨까지는 5, 101레벨부터는 10 준다 (`statPointsForLevel`, `LOW_STAT_POINT_MAX_LEVEL`).
 - 필요 경험치 = `round(20 x 레벨^1.5)`. 1→2는 20 (오리 경험치 2 x 10마리).
 - 레벨업하면 HP/MP가 가득 찬다.
 - `highestLevel`: 최고 도달 레벨을 기억한다. DEV 메뉴로 레벨을 내렸다 올려도 이 레벨을 넘을 때만 포인트를 준다.
@@ -137,7 +148,8 @@ docs/                PLAN.md(계획), CONVERSATION_LOG.md(대화기록), DEVLOG.
 - 공격력 = `baseDerived.attack + attackMin + floor(random x (attackMax - attackMin + 1))`. 즉 공격할 때마다 무기 범위에서 무작위.
 - 방어력, 최대 HP는 전투 능력치에 더한다. 최대 HP가 줄면 현재 HP도 깎는다.
 - 같은 종류 칸이 비어 있으면 거기에, 모두 차 있으면 첫 칸과 교체한다. 벗을 때 인벤토리가 가득 차 있으면 실패한다.
-- 아이템: 초보자용 검(공격력 5~10), 초보자용 방패(방어력 1, 체력 10).
+- 아이템: 초보자용 검(공격력 5~10), 초보자용 방패(방어력 1, 체력 10, 오리 드랍), 초보자용 상의(방어력 3, 체력 50, 다람쥐 드랍), 초보자용 바지(방어력 2, 체력 30, 다람쥐 드랍).
+- 입은 옷 그림 (`art/wornItemArt.ts`): 자세마다 손으로 그리지 않고, 캐릭터 그림에서 옷이 덮는 칸을 바꿔 자동으로 만든다. 상의는 13~17줄의 피부(몸통·팔)와 18줄 팬티 밴드를 덮고 손·주먹(19칸부터)은 그대로 둔다. 하의는 18줄 팬티 밴드를 허리띠로, 19~22줄의 팬티·다리를 바지로 덮는다. 외곽선은 그대로 둔다. 새 옷은 `WORN_ITEM_ART`에 색만 추가하면 모든 자세(서기, 걷기, 밧줄, 주먹질)에 입혀진다.
 
 ### 지형 충돌 (`Terrain.ts`)
 - Phaser Arcade는 경사를 지원하지 않아, 바닥을 `[x, y]` 꺾은선으로 두고 직접 처리한다.
@@ -151,14 +163,36 @@ Phaser는 장면을 역순(나중에 추가된 UIScene 먼저)으로 갱신한�
 
 ### 저장 형식 (`SaveGame.ts`)
 - 키 `maplelike-rpg.save`, 버전 1. 버전이 다르거나 깨진 데이터는 무시한다.
-- 내용: `stats`(base, bonus, hp, mp, level, exp, statPoints, highestLevel), `inventory`(96칸 배열), `equipment`(칸 id → 아이템), `progress.starterGear`.
+- 내용: `stats`(base, bonus, hp, mp, level, exp, statPoints, highestLevel), `inventory`(96칸 배열), `gold`(없으면 0), `equipment`(칸 id → 아이템), `progress.starterGear`.
 - 위치와 몬스터는 저장하지 않는다.
 - `AutoSaver`는 마지막으로 쓴 JSON과 같으면 쓰지 않는다. 1초마다 변경을 확인하고 페이지를 떠날 때도 저장한다. localStorage가 막혀 있으면 저장 없이 계속 진행한다.
 - 불러올 때 장비를 먼저 끼운 뒤 HP/MP를 한도로 보정하고, 없어진 아이템은 버린다.
 
+### 맵 구조 (`src/data/maps/`)
+- 맵은 데이터, `GameScene`은 그 데이터를 읽어 그리는 엔진이다. 새 맵은 파일을 만들고 `maps/index.ts`의 `MAPS`에 추가하면 된다. 씬 코드는 고치지 않는다.
+- 포탈, NPC, 샌드백은 `objects` 목록에 둔다. 포탈은 `to: { map, portal }`로 도착할 맵의 포탈 id를 가리키고, 그 포탈 위에 선다. `to`가 없으면 "준비 중" 메시지를 띄운다.
+- NPC는 `story/npcs.ts`의 `NPCS`에 이름·생김새·대화 함수를 등록하고, 맵에는 `npcId`로 배치한다.
+- 맵 이동은 `scene.restart({ mapId, portalId })`. 캐릭터 상태는 장면 필드라 그대로 남는다. 저장은 처음 한 번만 불러오고, 장면이 끝날 때 저장한다. UIScene은 이미 떠 있으면 다시 띄우지 않는다.
+- 저장 데이터의 `progress.mapId`로 마지막 맵에서 시작한다. 없는 맵이면 시작 맵으로 간다(`getMap`). 예전 저장과 호환되도록 버전은 올리지 않았다.
+- `tests/maps.test.ts`가 바닥 범위, 오브젝트 위치, 포탈 연결, NPC 등록을 검사한다.
+
+### 스킬
+- `data/skills.ts`의 `SKILLS`. 스킬마다 무기 조건(`weapon`), 범위(`range`), 계수(`power`), 대기시간, 동작 시간, 아이콘을 정한다.
+- 데미지 = 캐릭터 공격력(`rollAttack`, 무기 포함) x 계수, 반올림. 판정은 기본 공격과 같은 `Player.strike`를 쓰고 대기시간도 공유한다.
+- 칼 던지기: 한손검 전용, 범위 1, 계수 1.3, 대기시간 600ms. 손에 든 검을 숨기고 같은 그림이 앞으로 빙글빙글 날아갔다 사라진다 (`effects/thrownWeapon.ts`). 판정은 던지는 순간 들어간다. MP는 쓰지 않는다.
+- 무기 조건이 안 맞으면 "한손검을 들어야 쓸 수 있다."를 띄운다. 밧줄에 매달렸거나 맞고 튕겨 나가는 중에는 쓰지 못한다.
+- 레온하르트: 초보자 장비를 받은 뒤 검·방패·상의·하의를 모두 입고 말을 걸면 칼 던지기를 가르쳐 준다 (`wearsStarterSet`). 배운 뒤에는 짧은 대사만 한다.
+- 저장: `skills: { learned, hotkeys }` (없으면 스킬 없이 시작). DEV 메뉴에 "칼 던지기 배우기"가 있다.
+
 ### 몬스터
-- 아기 오리: HP 50, 접촉 데미지 5, 걷기 40px/s, 추격 55px/s, 경험치 2. 비선공이며 맞으면 화난 얼굴로 쫓아온다.
-- 스포너: 최대 10마리, 20초마다 모자란 수를 채움. 바닥과 발판에서 나오며 플레이어 160px 안쪽은 피한다.
+- 종족(`species`)마다 파일 하나: `data/monsters/bird.ts`(조류), `mouse.ts`(설치류). 파일 이름은 종족 id와 같은 단수형이다 (mouse → mice 같은 불규칙 복수형을 피하고, species 값으로 파일을 바로 찾기 위해). 레벨은 밸런스 조정 때 바뀌므로 파일 구분이 아니라 `level` 칸에 둔다.
+- 레벨은 `level: { min, max }` 범위에서 나올 때마다 무작위로 정한다. 능력치는 `stats`(min 레벨 기준) + `perLevel` x (레벨 - min) (`statsAtLevel`). 머리 위에 `Lv.N`을 띄우고, 맞으면 그 위에 체력바를 그린다.
+- 아기 오리(bird, Lv.1, field1): HP 50, 접촉 데미지 5, 걷기 40px/s, 추격 55px/s, 경험치 2. 뒤뚱거리며 걷는다.
+- 다람쥐(mouse, Lv.3~5, field2): HP 70/80/90, 접촉 데미지 7/8/9, 경험치 3/4/5, 걷기 60px/s, 추격 85px/s. 종종걸음(8fps), 기울지 않는다.
+- 모두 비선공이며 맞으면 화난 얼굴로 쫓아온다.
+- 전리품 (`gold`, `drops`): 골드는 쓰러뜨리면 바로 들어오고 그 자리에 "+N 골드"가 떠오른다 (오리 1~3, 다람쥐 3~6). 아이템은 쓰러진 자리(발밑 높이)에 톡 튀어 떨어져 둥실거리고, 가까이에서 Z로 줍는다 (오리 → 초보자용 방패 10%, 다람쥐 → 초보자용 상의 10%, 초보자용 바지 10%, 각각 따로 정한다). 인벤토리가 가득 차면 줍지 못한다. 떨어진 아이템은 맵을 옮기면 사라진다.
+- 골드는 인벤토리 창 제목 옆에 노란 글씨(`TEXT.gold`)로 보여준다.
+- 스포너: 맵의 출현 규칙마다 하나. 최대 수(field1 오리 10, field2 다람쥐 8)까지 20초마다 모자란 수를 채움. 바닥과 발판에서 나오며 플레이어 160px 안쪽은 피한다.
 
 ## 6. 버그와 해결
 | 문제 | 원인 | 해결 |
@@ -176,9 +210,9 @@ Phaser는 장면을 역순(나중에 추가된 UIScene 먼저)으로 갱신한�
 | 테스트가 사용자 저장 데이터를 덮어쓸 위험 | 개발 서버 Chrome이 같은 localStorage 사용 | 테스트 전 백업, 후 복원 |
 
 ## 7. 남은 과제 / 다음 할 일
-- 다음 맵(마을)과 포털 이동. 빛 기둥은 현재 "준비 중" 메시지만 띄운다.
+- 두 번째 맵(`field2.ts`, 지금은 임시) 꾸미기와 마을. 연결이 없는 포탈은 "준비 중" 메시지만 띄운다.
 - 명중률/회피 공식 적용 (hit, mhit, evasion은 계산만 되고 쓰이지 않음), 크리티컬, 공격속도 반영 확인.
-- 스킬 시스템과 MP 사용, 핫키 (M3).
+- MP를 쓰는 스킬, 스킬 레벨, 스킬 추가 (M3).
 - 사망 처리 정책 (경험치 손실, 부활 위치 등).
 - 검을 장착했을 때의 공격 범위 (지금은 기본 주먹 범위 기준).
 - 인벤토리/장비 드래그 장착.

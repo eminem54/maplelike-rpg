@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { describeStats, ITEM_KIND_LABEL, type ItemDef } from '../data/items';
-import { WINDOW_COLOR } from './UIWindow';
+import { PANEL, TEXT } from '../theme/colors';
 
 const W = 220;
 const PAD = 10;
@@ -13,9 +13,9 @@ export class ItemTooltip {
   private readonly text: Phaser.GameObjects.Text;
 
   constructor(private scene: Phaser.Scene) {
-    this.bg = scene.add.rectangle(0, 0, W, 10, 0x0e1220, 0.95).setOrigin(0).setStrokeStyle(1, WINDOW_COLOR.border);
+    this.bg = scene.add.rectangle(0, 0, W, 10, 0x0e1220, 0.95).setOrigin(0).setStrokeStyle(1, PANEL.border);
     this.text = scene.add.text(PAD, PAD, '', {
-      fontFamily: 'sans-serif', fontSize: '13px', color: '#ffffff', lineSpacing: 4,
+      fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.main, lineSpacing: 4,
       wordWrap: { width: W - PAD * 2, useAdvancedWrap: true },
     });
     this.root = scene.add.container(0, 0, [this.bg, this.text]).setDepth(800).setVisible(false);

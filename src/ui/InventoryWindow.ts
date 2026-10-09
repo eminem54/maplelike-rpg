@@ -4,6 +4,7 @@ import type { Inventory } from '../systems/Inventory';
 import type { ItemTooltip } from './ItemTooltip';
 import { onSlotActivate } from './slotInput';
 import { UIWindow, WINDOW_COLOR, WINDOW_PAD, WINDOW_TITLE_H } from './UIWindow';
+import { TEXT } from '../theme/colors';
 
 const COLS = 6;
 const VISIBLE_ROWS = 8;
@@ -34,6 +35,7 @@ export class InventoryWindow extends UIWindow {
   private thumbDragOffset: number | null = null;
   private wheelDelta = 0;
   private shownVersion = -1;
+  private readonly goldText: Phaser.GameObjects.Text;
 
   /**
    * @param onUse 아이템 칸을 더블클릭·우클릭했을 때 (장착 등). 인벤토리 칸 번호를 받는다.
@@ -47,6 +49,14 @@ export class InventoryWindow extends UIWindow {
     onUse: (index: number) => void,
   ) {
     super(scene, x, y, INVENTORY_WIDTH, INVENTORY_HEIGHT, '인벤토리');
+
+    // 제목 옆에 가진 골드를 보여준다
+    this.goldText = scene.add
+      .text(this.titleText.x + this.titleText.width + 12, WINDOW_TITLE_H / 2, '', {
+        fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: TEXT.gold,
+      })
+      .setOrigin(0, 0.5);
+    this.add(this.goldText);
 
     const totalRows = Math.ceil(inventory.size / COLS);
     this.maxScrollRow = Math.max(0, totalRows - VISIBLE_ROWS);
@@ -63,7 +73,7 @@ export class InventoryWindow extends UIWindow {
         const icon = scene.add.image(sx + SLOT / 2, sy + SLOT / 2, '__DEFAULT').setVisible(false);
         const count = scene.add
           .text(sx + SLOT - 3, sy + SLOT - 2, '', {
-            fontFamily: 'sans-serif', fontSize: '11px', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+            fontFamily: 'sans-serif', fontSize: '11px', color: TEXT.main, stroke: TEXT.outline, strokeThickness: 3,
           })
           .setOrigin(1, 1);
         this.add([slot, icon, count]);
@@ -124,6 +134,7 @@ export class InventoryWindow extends UIWindow {
 
   refresh() {
     this.shownVersion = this.inventory.version;
+    this.goldText.setText(`${this.inventory.gold.toLocaleString()} 골드`);
     this.slotIcons.forEach((icon, i) => {
       const item = this.inventory.get(this.scrollRow * COLS + i);
       const def = item && getItem(item.itemId);

@@ -5,6 +5,8 @@ export const INVENTORY_SIZE = 96;
 
 export class Inventory {
   private slots: (InventoryItem | null)[];
+  /** 가진 골드. 칸을 차지하지 않는다. */
+  gold = 0;
   /** 내용이 바뀔 때마다 1씩 늘어난다 (화면이 다시 그릴지 판단할 때 쓴다) */
   version = 0;
 
@@ -31,9 +33,16 @@ export class Inventory {
     return this.slots.includes(null);
   }
 
-  /** 모든 칸을 비운다 */
+  /** 골드를 더한다 */
+  addGold(amount: number) {
+    this.gold += amount;
+    this.version += 1;
+  }
+
+  /** 모든 칸과 골드를 비운다 */
   clear() {
     this.slots.fill(null);
+    this.gold = 0;
     this.version += 1;
   }
 

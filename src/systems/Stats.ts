@@ -84,8 +84,13 @@ export type GearBonus = {
 export const NO_GEAR: GearBonus = { attackMin: 0, attackMax: 0, defense: 0, maxHp: 0 };
 
 export const MAX_LEVEL = 999;
-/** 레벨업마다 받는 능력치 포인트 */
-export const STAT_POINTS_PER_LEVEL = 10;
+/** 이 레벨까지는 레벨업마다 적게(5) 주고, 그 뒤로는 많이(10) 준다 */
+export const LOW_STAT_POINT_MAX_LEVEL = 100;
+
+/** level에 처음 도달했을 때 받는 능력치 포인트 */
+export function statPointsForLevel(level: number) {
+  return level <= LOW_STAT_POINT_MAX_LEVEL ? 5 : 10;
+}
 
 /** level에서 다음 레벨로 가는 데 필요한 경험치. 1→2는 20 (아기 오리 10마리). */
 export function expToNextLevel(level: number) {
@@ -169,7 +174,7 @@ export class CharacterStats {
       // 레벨을 내렸다가 다시 올리는 경우에는 포인트를 또 주지 않는다
       if (this.level > this.highestLevel) {
         this.highestLevel = this.level;
-        this.statPoints += STAT_POINTS_PER_LEVEL;
+        this.statPoints += statPointsForLevel(this.level);
       }
       gained += 1;
     }

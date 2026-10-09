@@ -1,15 +1,56 @@
+import type { EquipSlotId } from '../data/equipment';
 import { ITEMS } from '../data/items';
-import type { Inventory } from '../systems/Inventory';
-import type { Progress } from '../systems/Progress';
-import type { DialogBox } from '../ui/DialogBox';
+import { SKILLS } from '../data/skills';
+import type { Equipment } from '../systems/Equipment';
+import type { TalkContext } from './npcs';
 
 export const KNIGHT_NAME = '황금기사 레온하르트';
 
-type Context = { dialog: DialogBox; inventory: Inventory; progress: Progress };
+/** 이 네 가지를 모두 입고 말을 걸면 칼 던지기를 가르쳐 준다 */
+const STARTER_SET: Partial<Record<EquipSlotId, string>> = {
+  weapon: ITEMS.starterSword.id,
+  shield: ITEMS.starterShield.id,
+  top: ITEMS.starterShirt.id,
+  bottom: ITEMS.starterPants.id,
+};
+
+export function wearsStarterSet(equipment: Equipment) {
+  return Object.entries(STARTER_SET).every(([slot, id]) => equipment.get(slot as EquipSlotId)?.itemId === id);
+}
 
 /** 황금기사에게 말을 걸었을 때 */
-export function talkToKnight({ dialog, inventory, progress }: Context) {
+export function talkToKnight({ dialog, inventory, equipment, progress, skills }: TalkContext) {
   const say = (lines: string[], then?: () => void) => dialog.say(KNIGHT_NAME, lines, then);
+  const skill = SKILLS.throwSword;
+
+  // 이미 스킬을 배웠으면 짧게 끝낸다
+  if (skills.has(skill.id)) {
+    say([
+      `${skill.name}는 손에 좀 익었나? 던진 검이 알아서 손으로 돌아오다니, 편리한 세상이군.`,
+      '빛 기둥은 저쪽, 오른쪽 끝이다. 몸조심해라.',
+    ]);
+    return;
+  }
+
+  // 초보자 장비를 모두 갖춰 입고 오면 스킬을 가르쳐 준다
+  if (progress.starterGear !== 'none' && wearsStarterSet(equipment)) {
+    say(
+      [
+        '(투구 너머로 위아래를 훑어본다)\n...호오. 검에 방패, 옷까지 제대로 갖춰 입었군.',
+        '이제 좀 볼만하군. 어디까지 버틸지는 모르겠지만, 왕국에 도움이 되길 바란다.',
+        '여행에 도움이 될 만한 기술을 하나 가르쳐 주지.',
+      ],
+      () => {
+        skills.learn(skill.id);
+        say([
+          '잘 봐라. 검을 쥔 손목에 힘을 싣고... 앞으로 던진다!',
+          `이것이 [${skill.name}]다. 한손검을 들고 있을 때만 쓸 수 있지.`,
+          'K를 눌러 스킬창을 열고, 아래쪽 단축키 칸(QWERT, ASDFG)에 끌어다 놓고 써 봐라.',
+        ]);
+      },
+    );
+    return;
+  }
 
   // 이미 장비를 받았으면 짧게 끝낸다
   if (progress.starterGear !== 'none') {

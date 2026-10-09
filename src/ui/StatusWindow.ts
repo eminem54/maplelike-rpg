@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { CharacterStats, DerivedStats, PrimaryStats } from '../systems/Stats';
 import { INVENTORY_HEIGHT, INVENTORY_WIDTH } from './InventoryWindow';
 import { UIWindow, WINDOW_COLOR, WINDOW_PAD, WINDOW_TITLE_H } from './UIWindow';
+import { GAUGE, TEXT } from '../theme/colors';
 
 const ROW_H = 22;
 const SECTION_GAP = 8;
@@ -91,25 +92,25 @@ export class StatusWindow extends UIWindow {
   constructor(scene: Phaser.Scene, x: number, y: number, private stats: CharacterStats) {
     super(scene, x, y, INVENTORY_WIDTH, INVENTORY_HEIGHT, '상태');
     this.levelText = scene.add
-      .text(56, WINDOW_TITLE_H / 2, '', { fontFamily: 'sans-serif', fontSize: '14px', color: '#fff27a' })
+      .text(56, WINDOW_TITLE_H / 2, '', { fontFamily: 'sans-serif', fontSize: '14px', color: TEXT.accent })
       .setOrigin(0, 0.5);
     this.add(this.levelText);
 
     let y0 = WINDOW_TITLE_H + WINDOW_PAD;
-    this.hpBar = this.addBar('HP', y0, 0xe0484f);
+    this.hpBar = this.addBar('HP', y0, GAUGE.hp);
     y0 += BAR_H + 8;
-    this.mpBar = this.addBar('MP', y0, 0x3f7fe0);
+    this.mpBar = this.addBar('MP', y0, GAUGE.mp);
     y0 += BAR_H + SECTION_GAP;
 
     for (const section of SECTIONS) {
       this.add(
         scene.add.text(WINDOW_PAD, y0 + 4, section.title, {
-          fontFamily: 'sans-serif', fontSize: '12px', color: WINDOW_COLOR.dimText,
+          fontFamily: 'sans-serif', fontSize: '12px', color: TEXT.dim,
         }),
       );
       if (section.showStatPoints) {
         this.statPointsText = scene.add
-          .text(INVENTORY_WIDTH - WINDOW_PAD, y0 + 4, '', { fontFamily: 'sans-serif', fontSize: '12px', color: '#7be08a' })
+          .text(INVENTORY_WIDTH - WINDOW_PAD, y0 + 4, '', { fontFamily: 'sans-serif', fontSize: '12px', color: TEXT.bonus })
           .setOrigin(1, 0);
         this.add(this.statPointsText);
       }
@@ -147,12 +148,12 @@ export class StatusWindow extends UIWindow {
     const width = INVENTORY_WIDTH - WINDOW_PAD * 2 - labelW;
     const bx = WINDOW_PAD + labelW;
     const name = this.scene.add
-      .text(WINDOW_PAD, y + BAR_H / 2, label, { fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff' })
+      .text(WINDOW_PAD, y + BAR_H / 2, label, { fontFamily: 'sans-serif', fontSize: '14px', color: TEXT.main })
       .setOrigin(0, 0.5);
     const bg = this.scene.add.rectangle(bx, y, width, BAR_H, WINDOW_COLOR.track).setOrigin(0);
     const fill = this.scene.add.rectangle(bx, y, width, BAR_H, color).setOrigin(0);
     const text = this.scene.add
-      .text(bx + width / 2, y + BAR_H / 2, '', { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' })
+      .text(bx + width / 2, y + BAR_H / 2, '', { fontFamily: 'sans-serif', fontSize: '12px', color: TEXT.main })
       .setOrigin(0.5);
     this.add([name, bg, fill, text]);
     return { fill, text, width };
@@ -165,12 +166,12 @@ export class StatusWindow extends UIWindow {
 
   private addEntry(entry: Entry, x: number, y: number) {
     const name = this.scene.add.text(x, y, entry.name, {
-      fontFamily: 'sans-serif', fontSize: '13px', color: '#ffffff',
+      fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.main,
     });
     this.add(name);
     const codeText = entry.code
       ? this.scene.add.text(x + name.width + 4, y + 2, entry.code, {
-        fontFamily: 'sans-serif', fontSize: '11px', color: WINDOW_COLOR.dimText,
+        fontFamily: 'sans-serif', fontSize: '11px', color: TEXT.dim,
       })
       : null;
     if (codeText) this.add(codeText);
@@ -181,7 +182,7 @@ export class StatusWindow extends UIWindow {
       .text(right, y, '', { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffd76a' })
       .setOrigin(1, 0);
     const bonusText = this.scene.add
-      .text(right, y, '', { fontFamily: 'sans-serif', fontSize: '13px', color: '#7be08a' })
+      .text(right, y, '', { fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.bonus })
       .setOrigin(1, 0);
     this.add([value, bonusText]);
     this.values.push({ entry, text: value, bonusText, codeText, right });
@@ -194,7 +195,7 @@ export class StatusWindow extends UIWindow {
       .setStrokeStyle(1, 0xaecbff)
       .setInteractive({ cursor: 'pointer' });
     const label = this.scene.add
-      .text(x + PLUS_SIZE / 2, y + PLUS_SIZE / 2, '+', { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffffff' })
+      .text(x + PLUS_SIZE / 2, y + PLUS_SIZE / 2, '+', { fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.main })
       .setOrigin(0.5);
     bg.on('pointerdown', () => {
       this.stats.spendStatPoint(key);

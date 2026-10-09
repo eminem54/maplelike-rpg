@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PANEL, TEXT } from '../theme/colors';
 
 export type DevAction = { label: string; run: () => void };
 
@@ -11,10 +12,7 @@ const ITEM_H = 30;
 const COLOR = {
   button: 0x7a2fb0,
   buttonBorder: 0xd6a8ff,
-  menu: 0x1c2438,
-  item: 0x1c2438,
   itemHover: 0x3a4a78,
-  border: 0x6b7fb0,
 };
 
 /** 개발자용 메뉴. 오른쪽 위 DEV 버튼에 마우스를 올리면 기능 목록이 열린다. */
@@ -34,7 +32,7 @@ export class DevMenu {
       .setDepth(1000);
     scene.add
       .text(buttonX + BUTTON_W / 2, MARGIN + BUTTON_H / 2, 'DEV', {
-        fontFamily: 'Arial Black, sans-serif', fontSize: '13px', color: '#ffffff',
+        fontFamily: 'Arial Black, sans-serif', fontSize: '13px', color: TEXT.main,
       })
       .setOrigin(0.5)
       .setDepth(1000);
@@ -44,18 +42,18 @@ export class DevMenu {
     const menuY = MARGIN + BUTTON_H + 2;
     this.menu = scene.add.container(menuX, menuY).setDepth(1000).setVisible(false);
     this.menu.add(
-      scene.add.rectangle(0, 0, ITEM_W, ITEM_H * actions.length, COLOR.menu).setOrigin(0).setStrokeStyle(1, COLOR.border),
+      scene.add.rectangle(0, 0, ITEM_W, ITEM_H * actions.length, PANEL.bg).setOrigin(0).setStrokeStyle(1, PANEL.border),
     );
     actions.forEach((action, i) => {
       const bg = scene.add
-        .rectangle(0, i * ITEM_H, ITEM_W, ITEM_H, COLOR.item)
+        .rectangle(0, i * ITEM_H, ITEM_W, ITEM_H, PANEL.bg)
         .setOrigin(0)
         .setInteractive({ cursor: 'pointer' });
       const label = scene.add
-        .text(12, i * ITEM_H + ITEM_H / 2, action.label, { fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff' })
+        .text(12, i * ITEM_H + ITEM_H / 2, action.label, { fontFamily: 'sans-serif', fontSize: '14px', color: TEXT.main })
         .setOrigin(0, 0.5);
       bg.on('pointerover', () => bg.setFillStyle(COLOR.itemHover));
-      bg.on('pointerout', () => bg.setFillStyle(COLOR.item));
+      bg.on('pointerout', () => bg.setFillStyle(PANEL.bg));
       bg.on('pointerdown', () => action.run());
       this.menu.add([bg, label]);
     });

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { MonsterData } from '../data/monsters';
-import { Duck } from '../entities/Duck';
+import { Monster } from '../entities/Monster';
 import type { Player } from '../entities/Player';
 
 /** 맵의 몬스터 출현 규칙 */
@@ -21,8 +21,8 @@ const PICK_TRIES = 10;
 
 /** 정해진 간격마다 맵의 몬스터 수를 최대치까지 채운다 */
 export class MonsterSpawner {
-  readonly monsters: Duck[] = [];
-  private readonly colliders = new Map<Duck, Phaser.Physics.Arcade.Collider[]>();
+  readonly monsters: Monster[] = [];
+  private readonly colliders = new Map<Monster, Phaser.Physics.Arcade.Collider[]>();
   private nextCheckAt = 0;
 
   constructor(
@@ -31,7 +31,7 @@ export class MonsterSpawner {
     private surfaces: SpawnSurface[],
     private solids: Phaser.Physics.Arcade.StaticGroup,
     private player: Player,
-    private onKilled: (monster: Duck) => void,
+    private onKilled: (monster: Monster) => void,
   ) {}
 
   update(time: number) {
@@ -51,25 +51,26 @@ export class MonsterSpawner {
     const spot = this.pickSpot();
     if (!spot) return;
     const { surface, x } = spot;
-    const duck = new Duck(
+    const monster = new Monster(
       this.scene,
       this.rule.monster,
+      Phaser.Math.Between(this.rule.monster.level.min, this.rule.monster.level.max),
       x,
       surface.yAt(x),
       { minX: surface.left + EDGE_MARGIN, maxX: surface.right - EDGE_MARGIN },
       { onKilled: this.onKilled, onRemoved: (m) => this.remove(m) },
     );
 
-    this.colliders.set(duck, [
-      this.scene.physics.add.collider(duck.sprite, this.solids),
+    this.colliders.set(monster, [
+      this.scene.physics.add.collider(monster.sprite, this.solids),
       // 닿으면 데미지를 받고 몬스터 반대쪽으로 튕겨 나간다
-      this.scene.physics.add.overlap(this.player.sprite, duck.sprite, () => {
-        if (duck.alive) {
-          this.player.takeHit(duck.data.contactDamage, this.player.sprite.x < duck.sprite.x ? -1 : 1);
+      this.scene.physics.add.overlap(this.player.sprite, monster.sprite, () => {
+        if (monster.alive) {
+          this.player.takeHit(monster.stats.contactDamage, this.player.sprite.x < monster.sprite.x ? -1 : 1);
         }
       }),
     ]);
-    this.monsters.push(duck);
+    this.monsters.push(monster);
   }
 
   /** 넓은 곳일수록 자주 고르고, 플레이어와 가까운 자리는 피한다 */
@@ -86,10 +87,10 @@ export class MonsterSpawner {
     return null;
   }
 
-  private remove(duck: Duck) {
-    this.colliders.get(duck)?.forEach((c) => c.destroy());
-    this.colliders.delete(duck);
-    const index = this.monsters.indexOf(duck);
+  private remove(monster: Monster) {
+    this.colliders.get(monster)?.forEach((c) => c.destroy());
+    this.colliders.delete(monster);
+    const index = this.monsters.indexOf(monster);
     if (index !== -1) this.monsters.splice(index, 1);
   }
 }

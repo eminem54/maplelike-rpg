@@ -1,17 +1,14 @@
 import Phaser from 'phaser';
+import { PANEL, TEXT } from '../theme/colors';
 
 export const WINDOW_PAD = 12;
 export const WINDOW_TITLE_H = 32;
 
 export const WINDOW_COLOR = {
-  panel: 0x1c2438,
-  border: 0x6b7fb0,
-  title: 0x2c3a5e,
   slot: 0x2a3554,
   slotBorder: 0x46557e,
   track: 0x141a2a,
   thumb: 0x8193c4,
-  dimText: '#8f9bbd',
 };
 
 /**
@@ -20,6 +17,7 @@ export const WINDOW_COLOR = {
  */
 export class UIWindow extends Phaser.GameObjects.Container {
   private dragOffset: { x: number; y: number } | null = null;
+  protected readonly titleText: Phaser.GameObjects.Text;
   private readonly docked: { win: UIWindow; dx: number; dy: number }[] = [];
   private dockedTo: UIWindow | null = null;
 
@@ -34,24 +32,24 @@ export class UIWindow extends Phaser.GameObjects.Container {
     super(scene, x, y);
 
     const panel = scene.add
-      .rectangle(0, 0, windowWidth, windowHeight, WINDOW_COLOR.panel)
+      .rectangle(0, 0, windowWidth, windowHeight, PANEL.bg)
       .setOrigin(0)
-      .setStrokeStyle(2, WINDOW_COLOR.border)
+      .setStrokeStyle(2, PANEL.border)
       .setInteractive(); // 창 위 클릭이 뒤로 새지 않도록
     const titleBar = scene.add
-      .rectangle(0, 0, windowWidth, WINDOW_TITLE_H, WINDOW_COLOR.title)
+      .rectangle(0, 0, windowWidth, WINDOW_TITLE_H, PANEL.header)
       .setOrigin(0)
       .setInteractive({ cursor: 'move' });
-    const titleText = scene.add
-      .text(WINDOW_PAD, WINDOW_TITLE_H / 2, title, { fontFamily: 'sans-serif', fontSize: '16px', color: '#ffffff' })
+    this.titleText = scene.add
+      .text(WINDOW_PAD, WINDOW_TITLE_H / 2, title, { fontFamily: 'sans-serif', fontSize: '16px', color: TEXT.main })
       .setOrigin(0, 0.5);
     const close = scene.add
       .text(windowWidth - WINDOW_PAD, WINDOW_TITLE_H / 2, '✕', {
-        fontFamily: 'sans-serif', fontSize: '16px', color: '#ffffff',
+        fontFamily: 'sans-serif', fontSize: '16px', color: TEXT.main,
       })
       .setOrigin(1, 0.5)
       .setInteractive({ cursor: 'pointer' });
-    this.add([panel, titleBar, titleText, close]);
+    this.add([panel, titleBar, this.titleText, close]);
 
     panel.on('pointerdown', () => this.root.raiseGroup());
     titleBar.on('pointerdown', (p: Phaser.Input.Pointer) => {

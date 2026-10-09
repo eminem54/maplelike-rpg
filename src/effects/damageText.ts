@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TEXT } from '../theme/colors';
 
 const STYLES = {
   /** 플레이어가 준 데미지 */
@@ -42,7 +43,7 @@ export function showLevelUp(scene: Phaser.Scene, x: number, y: number) {
     .text(x, y, 'LEVEL UP!', {
       fontFamily: 'Arial Black, sans-serif',
       fontSize: '32px',
-      color: '#fff27a',
+      color: TEXT.accent,
       stroke: '#7a4a00',
       strokeThickness: 6,
     })
@@ -67,8 +68,8 @@ export function showNotice(scene: Phaser.Scene, x: number, y: number, message: s
     .text(x, y, message, {
       fontFamily: 'sans-serif',
       fontSize: '16px',
-      color: '#ffffff',
-      stroke: '#000000',
+      color: TEXT.main,
+      stroke: TEXT.outline,
       strokeThickness: 4,
     })
     .setOrigin(0.5, 1)
@@ -83,6 +84,29 @@ export function showNotice(scene: Phaser.Scene, x: number, y: number, message: s
     alpha: 0,
     delay: 1200,
     duration: 600,
+    onComplete: () => text.destroy(),
+  });
+}
+
+/** 골드를 얻었을 때 그 자리에서 떠오르는 글자 */
+export function showGold(scene: Phaser.Scene, x: number, y: number, amount: number) {
+  const text = scene.add
+    .text(x, y, `+${amount.toLocaleString()} 골드`, {
+      fontFamily: 'sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      color: TEXT.gold,
+      stroke: TEXT.outline,
+      strokeThickness: 3,
+    })
+    .setOrigin(0.5, 1)
+    .setDepth(100);
+  scene.tweens.add({
+    targets: text,
+    y: y - 36,
+    alpha: { from: 1, to: 0, delay: 500 },
+    duration: 1000,
+    ease: 'Cubic.easeOut',
     onComplete: () => text.destroy(),
   });
 }

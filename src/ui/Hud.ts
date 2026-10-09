@@ -1,8 +1,18 @@
 import Phaser from 'phaser';
+import { SKILL_HOTKEYS } from '../data/keymap';
+import { skillTextureKey } from '../data/skills';
+import type { SkillBook } from '../systems/SkillBook';
 import type { CharacterStats } from '../systems/Stats';
+import { PANEL, TEXT } from '../theme/colors';
+import { startIconDrag } from './iconDrag';
 
 const HUD_W = 1024;
-const BAR_H = 48;
+const BAR_H = 88;
+// 스킬 단축키 칸: 위 줄 QWERT, 아래 줄 ASDFG (바 오른쪽 끝에 붙인다)
+const HOTKEY_COLS = 5;
+const HOTKEY_SLOT = 38;
+const HOTKEY_GAP = 4;
+const HOTKEY_PAD = 6;
 const ORB_R = 40;
 const ORB_RIM = 3;
 const HUD_PAD = 4;
@@ -17,12 +27,11 @@ export const HUD_BACKGROUND = '#111111';
 const DRAIN_SPEED = 1.5;
 
 const COLOR = {
-  bar: 0x1c2438,
-  barBorder: 0x6b7fb0,
   orbEmpty: 0x0e0f16,
   rim: 0x9a7b45,
   expEmpty: 0x2a2a1a,
   exp: 0xe8c33a,
+  hotkey: 0x141a2a,
 };
 
 type OrbStyle = { label: string; liquid: number; surface: number };
@@ -49,12 +58,12 @@ class Orb {
 
     scene.add
       .text(x, y - 10, style.label, {
-        fontFamily: 'Arial Black, sans-serif', fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+        fontFamily: 'Arial Black, sans-serif', fontSize: '12px', color: TEXT.main, stroke: TEXT.outline, strokeThickness: 3,
       })
       .setOrigin(0.5);
     this.text = scene.add
       .text(x, y + 6, '', {
-        fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+        fontFamily: 'sans-serif', fontSize: '12px', color: TEXT.main, stroke: TEXT.outline, strokeThickness: 3,
       })
       .setOrigin(0.5);
   }
@@ -73,8 +82,12 @@ class Orb {
   }
 }
 
-/** 화면 하단 HUD: 왼쪽 HP 구슬, 오른쪽 MP 구슬, 그 사이 바(나중에 스킬 단축키 자리). */
+type HotkeySlot = { code: string; bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image };
+
+/** 화면 하단 HUD: 왼쪽 HP 구슬, 오른쪽 MP 구슬, 그 사이 바(레벨, 스킬 단축키 칸). */
 export class Hud {
+  private readonly hotkeys: HotkeySlot[] = [];
+  private shownSkillsVersion = -1;
   private readonly hpOrb: Orb;
   private readonly mpOrb: Orb;
   private readonly levelText: Phaser.GameObjects.Text;
@@ -82,7 +95,7 @@ export class Hud {
   private readonly expText: Phaser.GameObjects.Text;
   private readonly expWidth = HUD_W;
 
-  constructor(scene: Phaser.Scene, private stats: CharacterStats) {
+  constructor(private scene: Phaser.Scene, private stats: CharacterStats, private skills: SkillBook) {
     const { width, height } = scene.scale;
     const orbY = height - EXP_H - ORB_AREA_H / 2;
     const orbOffset = ORB_R + ORB_RIM;
@@ -93,14 +106,16 @@ export class Hud {
     const barLeft = hpX + orbOffset;
     const barRight = mpX - orbOffset;
     scene.add
-      .rectangle((barLeft + barRight) / 2, orbY, barRight - barLeft, BAR_H, COLOR.bar)
-      .setStrokeStyle(2, COLOR.barBorder);
+      .rectangle((barLeft + barRight) / 2, orbY, barRight - barLeft, BAR_H, PANEL.bg)
+      .setStrokeStyle(2, PANEL.border);
 
     this.levelText = scene.add
       .text(barLeft + 14, orbY, '', {
-        fontFamily: 'Arial Black, sans-serif', fontSize: '18px', color: '#fff27a', stroke: '#000000', strokeThickness: 3,
+        fontFamily: 'Arial Black, sans-serif', fontSize: '18px', color: TEXT.accent, stroke: TEXT.outline, strokeThickness: 3,
       })
       .setOrigin(0, 0.5);
+
+    this.createHotkeys(barRight - HOTKEY_PAD, orbY);
 
     this.hpOrb = new Orb(scene, hpX, orbY, { label: 'HP', liquid: 0xb3202a, surface: 0xff6a6a });
     this.mpOrb = new Orb(scene, mpX, orbY, { label: 'MP', liquid: 0x1f4fb8, surface: 0x6aa8ff });
@@ -112,12 +127,57 @@ export class Hud {
     this.expFill = scene.add.rectangle(expLeft, expY, 0, EXP_H, COLOR.exp).setOrigin(0);
     this.expText = scene.add
       .text(width / 2, expY + EXP_H / 2, '', {
-        fontFamily: 'sans-serif', fontSize: '11px', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+        fontFamily: 'sans-serif', fontSize: '11px', color: TEXT.main, stroke: TEXT.outline, strokeThickness: 3,
       })
       .setOrigin(0.5);
   }
 
+  /** 바 오른쪽 끝(right)에 붙여 10칸을 2줄로 놓는다. 스킬창에서 끌어다 놓거나, 칸끼리 옮기거나, 밖으로 끌어내 뺀다. */
+  private createHotkeys(right: number, centerY: number) {
+    const gridW = HOTKEY_COLS * HOTKEY_SLOT + (HOTKEY_COLS - 1) * HOTKEY_GAP;
+    const left = right - gridW;
+    const top = centerY - HOTKEY_SLOT - HOTKEY_GAP / 2;
+    SKILL_HOTKEYS.forEach(({ code, label }, i) => {
+      const x = left + (i % HOTKEY_COLS) * (HOTKEY_SLOT + HOTKEY_GAP);
+      const y = top + Math.floor(i / HOTKEY_COLS) * (HOTKEY_SLOT + HOTKEY_GAP);
+      const bg = this.scene.add
+        .rectangle(x, y, HOTKEY_SLOT, HOTKEY_SLOT, COLOR.hotkey)
+        .setOrigin(0)
+        .setStrokeStyle(1, PANEL.border)
+        .setInteractive();
+      const icon = this.scene.add.image(x + HOTKEY_SLOT / 2, y + HOTKEY_SLOT / 2, '__DEFAULT').setVisible(false);
+      this.scene.add.text(x + 3, y + 1, label, {
+        fontFamily: 'Arial Black, sans-serif', fontSize: '10px', color: TEXT.main, stroke: TEXT.outline, strokeThickness: 2,
+      });
+      bg.on('pointerdown', (p: Phaser.Input.Pointer) => {
+        const skillId = this.skills.skillAt(code);
+        if (!skillId) return;
+        startIconDrag(this.scene, skillTextureKey(skillId), p, (dropX, dropY) => {
+          const to = this.hotkeyAt(dropX, dropY);
+          if (to) this.skills.move(code, to);
+          else this.skills.unbind(code);
+        });
+      });
+      this.hotkeys.push({ code, bg, icon });
+    });
+  }
+
+  /** 화면 좌표 (x, y)에 있는 단축키 칸 */
+  hotkeyAt(x: number, y: number) {
+    return this.hotkeys.find((h) => h.bg.getBounds().contains(x, y))?.code ?? null;
+  }
+
+  private refreshHotkeys() {
+    this.shownSkillsVersion = this.skills.version;
+    for (const { code, icon } of this.hotkeys) {
+      const skillId = this.skills.skillAt(code);
+      if (skillId) icon.setTexture(skillTextureKey(skillId)).setVisible(true);
+      else icon.setVisible(false);
+    }
+  }
+
   update(deltaMs: number) {
+    if (this.skills.version !== this.shownSkillsVersion) this.refreshHotkeys();
     const d = this.stats.derived;
     this.hpOrb.update(this.stats.hp, d.maxHp, deltaMs / 1000);
     this.mpOrb.update(this.stats.mp, d.maxMp, deltaMs / 1000);

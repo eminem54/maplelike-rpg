@@ -1,8 +1,10 @@
 import { EQUIP_SLOTS } from '../data/equipment';
 import { getItem } from '../data/items';
+import { START_MAP_ID } from '../data/maps';
 import type { Equipment } from './Equipment';
 import type { Inventory, InventoryItem } from './Inventory';
 import type { Progress } from './Progress';
+import type { SkillBook } from './SkillBook';
 import type { CharacterStats, PrimaryStats } from './Stats';
 
 /** 저장 데이터 형식이 바뀌면 올린다 (다른 버전의 저장은 불러오지 않는다) */
@@ -14,6 +16,7 @@ export type GameState = {
   inventory: Inventory;
   equipment: Equipment;
   progress: Progress;
+  skills: SkillBook;
 };
 
 export type SaveData = {
@@ -29,8 +32,13 @@ export type SaveData = {
     highestLevel: number;
   };
   inventory: (InventoryItem | null)[];
+  /** 나중에 추가해서 예전 저장에는 없다 */
+  gold?: number;
   equipment: Record<string, InventoryItem>;
-  progress: { starterGear: Progress['starterGear'] };
+  /** mapId는 나중에 추가해서 예전 저장에는 없다 */
+  progress: { starterGear: Progress['starterGear']; mapId?: string };
+  /** 나중에 추가해서 예전 저장에는 없다 */
+  skills?: { learned: string[]; hotkeys: Record<string, string> };
 };
 
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem'>;
@@ -45,7 +53,7 @@ export function browserStorage(): Storage {
 }
 
 /** 지금 상태를 저장 데이터로 만든다 (캐릭터 위치와 맵의 몬스터는 저장하지 않는다) */
-export function snapshot({ stats, inventory, equipment, progress }: GameState): SaveData {
+export function snapshot({ stats, inventory, equipment, progress, skills }: GameState): SaveData {
   const equipped: Record<string, InventoryItem> = {};
   for (const slot of EQUIP_SLOTS) {
     const item = equipment.get(slot.id);
@@ -67,13 +75,15 @@ export function snapshot({ stats, inventory, equipment, progress }: GameState): 
       const item = inventory.get(i);
       return item ? { ...item } : null;
     }),
+    gold: inventory.gold,
     equipment: equipped,
-    progress: { starterGear: progress.starterGear },
+    progress: { starterGear: progress.starterGear, mapId: progress.mapId },
+    skills: skills.toJSON(),
   };
 }
 
 /** 저장 데이터를 지금 상태에 덮어쓴다. 없어진 아이템은 버린다. */
-export function restore({ stats, inventory, equipment, progress }: GameState, data: SaveData) {
+export function restore({ stats, inventory, equipment, progress, skills }: GameState, data: SaveData) {
   const s = data.stats;
   Object.assign(stats.base, s.base);
   Object.assign(stats.bonus, s.bonus);
@@ -86,6 +96,7 @@ export function restore({ stats, inventory, equipment, progress }: GameState, da
   data.inventory.slice(0, inventory.size).forEach((item, i) => {
     if (item && getItem(item.itemId)) inventory.set(i, { ...item });
   });
+  inventory.gold = data.gold ?? 0;
   // 장비를 먼저 끼워야 최대 HP(방패 등)가 맞게 계산된다
   equipment.restore(data.equipment);
   const d = stats.derived;
@@ -93,6 +104,8 @@ export function restore({ stats, inventory, equipment, progress }: GameState, da
   stats.mp = Math.min(s.mp, d.maxMp);
 
   progress.starterGear = data.progress.starterGear;
+  progress.mapId = data.progress.mapId ?? START_MAP_ID;
+  skills.load(data.skills ?? { learned: [], hotkeys: {} });
 }
 
 /** 저장된 데이터를 읽는다. 없거나 깨져 있거나 버전이 다르면 null */

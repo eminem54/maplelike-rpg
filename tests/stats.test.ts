@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CharacterStats, deriveStats, expToNextLevel, MAX_BASE_STAT, MAX_LEVEL, START_PRIMARY, STAT_POINTS_PER_LEVEL,
+  CharacterStats, deriveStats, expToNextLevel, MAX_BASE_STAT, MAX_LEVEL, START_PRIMARY, statPointsForLevel,
 } from '../src/systems/Stats';
 
 describe('deriveStats', () => {
@@ -72,14 +72,26 @@ describe('CharacterStats', () => {
 describe('레벨', () => {
   const DUCK_EXP = 2;
 
-  it('아기 오리 10마리를 잡으면 2레벨, 포인트 10개', () => {
+  it('아기 오리 10마리를 잡으면 2레벨, 포인트 5개', () => {
     const s = new CharacterStats();
     for (let i = 0; i < 9; i++) s.gainExp(DUCK_EXP);
     expect(s.level).toBe(1);
     expect(s.gainExp(DUCK_EXP)).toBe(1);
     expect(s.level).toBe(2);
     expect(s.exp).toBe(0);
-    expect(s.statPoints).toBe(STAT_POINTS_PER_LEVEL);
+    expect(s.statPoints).toBe(statPointsForLevel(2));
+  });
+
+  it('레벨업 포인트는 100레벨까지 5, 그 뒤로는 10', () => {
+    expect(statPointsForLevel(2)).toBe(5);
+    expect(statPointsForLevel(100)).toBe(5);
+    expect(statPointsForLevel(101)).toBe(10);
+    const s = new CharacterStats();
+    s.setLevel(99);
+    const before = s.statPoints;
+    s.levelUp(); // 100
+    s.levelUp(); // 101
+    expect(s.statPoints - before).toBe(15);
   });
 
   it('한 번에 여러 레벨이 오를 수 있고 남은 경험치는 이어진다', () => {
@@ -88,7 +100,7 @@ describe('레벨', () => {
     expect(gained).toBe(2);
     expect(s.level).toBe(3);
     expect(s.exp).toBe(5);
-    expect(s.statPoints).toBe(STAT_POINTS_PER_LEVEL * 2);
+    expect(s.statPoints).toBe(statPointsForLevel(2) + statPointsForLevel(3));
   });
 
   it('레벨업하면 HP가 가득 찬다', () => {
@@ -123,22 +135,22 @@ describe('개발자 메뉴용 레벨 조작', () => {
     const s = new CharacterStats();
     s.levelUp();
     expect(s.level).toBe(2);
-    expect(s.statPoints).toBe(STAT_POINTS_PER_LEVEL);
+    expect(s.statPoints).toBe(statPointsForLevel(2));
   });
 
   it('레벨을 내렸다 다시 올리면 포인트를 주지 않고, 최고 레벨을 넘으면 다시 준다', () => {
     const s = new CharacterStats();
-    for (let i = 0; i < 4; i++) s.levelUp(); // 5레벨, 포인트 40
+    for (let i = 0; i < 4; i++) s.levelUp(); // 5레벨, 포인트 20
     s.spendStatPoint('str');
     s.setLevel(3);
     expect(s.level).toBe(3);
     expect(s.base.str).toBe(START_PRIMARY.str + 1); // 능력치는 그대로
-    expect(s.statPoints).toBe(39);
+    expect(s.statPoints).toBe(19);
     s.levelUp();
     s.levelUp(); // 다시 5레벨
-    expect(s.statPoints).toBe(39);
+    expect(s.statPoints).toBe(19);
     s.levelUp(); // 처음 도달하는 6레벨
-    expect(s.statPoints).toBe(39 + STAT_POINTS_PER_LEVEL);
+    expect(s.statPoints).toBe(19 + statPointsForLevel(6));
   });
 
   it('레벨은 1보다 내려가지 않는다', () => {
@@ -158,6 +170,6 @@ describe('개발자 메뉴용 레벨 조작', () => {
     expect(s.base).toEqual(START_PRIMARY);
     expect(s.bonus.str).toBe(0);
     s.levelUp();
-    expect(s.statPoints).toBe(STAT_POINTS_PER_LEVEL); // 초기화 후에는 다시 포인트를 받는다
+    expect(s.statPoints).toBe(statPointsForLevel(2)); // 초기화 후에는 다시 포인트를 받는다
   });
 });

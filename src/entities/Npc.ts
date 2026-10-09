@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createPixelTexture } from '../art/pixelArt';
+import { PANEL, TEXT, toCss } from '../theme/colors';
 
 const TALK_RANGE_X = 40; // 이만큼 가까이 서 있으면 말을 걸 수 있다
 const TALK_RANGE_Y = 24;
@@ -18,14 +19,14 @@ export class Npc {
 
     scene.add
       .text(x, groundY + 6, name, {
-        fontFamily: 'sans-serif', fontSize: '13px', color: '#fff27a', backgroundColor: '#000000aa',
+        fontFamily: 'sans-serif', fontSize: '13px', color: TEXT.accent, backgroundColor: '#000000aa',
         padding: { x: 6, y: 2 },
       })
       .setOrigin(0.5, 0)
       .setDepth(30);
     this.hint = scene.add
       .text(x, groundY - this.sprite.height - 8, 'Space', {
-        fontFamily: 'Arial Black, sans-serif', fontSize: '13px', color: '#ffffff', backgroundColor: '#2c3a5ecc',
+        fontFamily: 'Arial Black, sans-serif', fontSize: '13px', color: TEXT.main, backgroundColor: toCss(PANEL.header, 0.8),
         padding: { x: 6, y: 3 },
       })
       .setOrigin(0.5, 1)

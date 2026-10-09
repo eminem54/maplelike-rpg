@@ -6,6 +6,7 @@ import { INVENTORY_HEIGHT } from './InventoryWindow';
 import type { ItemTooltip } from './ItemTooltip';
 import { onSlotActivate } from './slotInput';
 import { UIWindow, WINDOW_COLOR, WINDOW_TITLE_H } from './UIWindow';
+import { TEXT } from '../theme/colors';
 
 const COLS = 3;
 const ROWS = 5;
@@ -39,7 +40,7 @@ export class EquipmentWindow extends UIWindow {
       // 빈 칸에는 어떤 장비 자리인지 흐리게 적어 둔다
       const label = scene.add
         .text(sx + SLOT / 2, sy + SLOT / 2, s.label, {
-          fontFamily: 'sans-serif', fontSize: '11px', color: WINDOW_COLOR.dimText, align: 'center',
+          fontFamily: 'sans-serif', fontSize: '11px', color: TEXT.dim, align: 'center',
         })
         .setOrigin(0.5);
       const icon = scene.add.image(sx + SLOT / 2, sy + SLOT / 2, '__DEFAULT').setVisible(false);
@@ -56,7 +57,7 @@ export class EquipmentWindow extends UIWindow {
 
     // 장비로 오른 능력치 합계
     this.summary = scene.add.text(PAD, GRID_TOP + GRID_H + 14, '', {
-      fontFamily: 'sans-serif', fontSize: '12px', color: '#7be08a', lineSpacing: 4,
+      fontFamily: 'sans-serif', fontSize: '12px', color: TEXT.bonus, lineSpacing: 4,
     });
     this.add(this.summary);
   }
@@ -81,7 +82,7 @@ export class EquipmentWindow extends UIWindow {
     if (b.defense > 0) lines.push(`방어력 +${b.defense}`);
     if (b.maxHp > 0) lines.push(`체력 +${b.maxHp}`);
     this.summary.setText(lines.length > 0 ? lines : ['장착한 장비 없음']);
-    this.summary.setColor(lines.length > 0 ? '#7be08a' : WINDOW_COLOR.dimText);
+    this.summary.setColor(lines.length > 0 ? TEXT.bonus : TEXT.dim);
     this.tooltip.hide();
   }
 

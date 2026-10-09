@@ -56,7 +56,8 @@ export class HeldItems {
     const angle = swing === null
       ? IDLE_SWORD_ANGLE
       : Phaser.Math.Linear(SWING_FROM, SWING_TO, Phaser.Math.Easing.Cubic.Out(swing));
-    const holding = this.place(this.weapon, this.equipment.get('weapon')?.itemId, hands.front, angle, hidden);
+    const thrown = this.player.isThrowing(time); // 던진 칼은 날아가는 중이라 손에 없다
+    const holding = this.place(this.weapon, this.equipment.get('weapon')?.itemId, hands.front, angle, hidden || thrown);
 
     // 무기를 들고 공격하면 칼끝을 따라 베기 자국을 남긴다
     if (holding && swing !== null && this.player.lastAttackAt !== this.slashedAt) {

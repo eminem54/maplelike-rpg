@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { START_MAP_ID } from '../src/data/maps';
 import { Equipment } from '../src/systems/Equipment';
 import { Inventory } from '../src/systems/Inventory';
 import { Progress } from '../src/systems/Progress';
+import { SkillBook } from '../src/systems/SkillBook';
 import { AutoSaver, readSave, restore, SAVE_KEY, snapshot, type GameState } from '../src/systems/SaveGame';
 import { CharacterStats } from '../src/systems/Stats';
 
 function newState(): GameState {
   const stats = new CharacterStats();
   const inventory = new Inventory();
-  return { stats, inventory, equipment: new Equipment(inventory, stats), progress: new Progress() };
+  return { stats, inventory, equipment: new Equipment(inventory, stats), progress: new Progress(), skills: new SkillBook() };
 }
 
 function memoryStorage() {
@@ -30,6 +32,10 @@ describe('저장/불러오기', () => {
     a.equipment.equipFromInventory(1); // 방패 장착
     a.stats.hp = 105;
     a.progress.starterGear = 'refused';
+    a.progress.mapId = 'field2';
+    a.inventory.addGold(123);
+    a.skills.learn('throwSword');
+    a.skills.bind('KeyA', 'throwSword');
 
     const storage = memoryStorage();
     new AutoSaver(a, storage).save();
@@ -48,6 +54,10 @@ describe('저장/불러오기', () => {
     expect(b.stats.derived.maxHp).toBe(110);
     expect(b.stats.hp).toBe(105); // 방패 덕분에 100을 넘는 HP도 유지된다
     expect(b.progress.starterGear).toBe('refused');
+    expect(b.progress.mapId).toBe('field2');
+    expect(b.inventory.gold).toBe(123);
+    expect(b.skills.has('throwSword')).toBe(true);
+    expect(b.skills.skillAt('KeyA')).toBe('throwSword');
     expect(snapshot(b)).toEqual(snapshot(a));
   });
 
@@ -69,6 +79,21 @@ describe('저장/불러오기', () => {
     restore(b, data);
     expect(b.inventory.get(0)).toBeNull();
     expect(b.equipment.get('weapon')).toBeNull();
+  });
+
+  it('맵·골드·스킬이 없던 예전 저장은 시작 맵, 0골드, 스킬 없이 시작한다', () => {
+    const data = snapshot(newState());
+    delete data.progress.mapId;
+    delete data.gold;
+    delete data.skills;
+    const b = newState();
+    b.progress.mapId = 'field2';
+    b.inventory.addGold(50);
+    b.skills.learn('throwSword');
+    restore(b, data);
+    expect(b.progress.mapId).toBe(START_MAP_ID);
+    expect(b.inventory.gold).toBe(0);
+    expect(b.skills.learnedIds).toEqual([]);
   });
 
   it('바뀐 게 없으면 다시 쓰지 않는다', () => {
